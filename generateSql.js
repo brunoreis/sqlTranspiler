@@ -92,8 +92,6 @@ const where = (f, macros, conditions, deep = false) => {
   }
   return whereClause
 }
-//"SELECT TOP 20 * FROM data;"
-// "SELECT * FROM data LIMIT 20;"
 
 const applyF = (fields) => (arg) => {
   if(arg === null) return null
@@ -103,7 +101,47 @@ const applyF = (fields) => (arg) => {
   return typeof arg === 'number' ? arg : `'${arg}'`
 }
 
+const checkCircularity = (macros, conditions, macrosStack) => {
+  const [operator, ...args] = conditions
+  if( ['and', 'or'].includes(operator) ) {
+    args.forEach( (conditionOrMacro) =>  {
+      if(conditionOrMacro[0] === 'macro') {
+        const innerMacroName = conditionOrMacro[1]
+        macrosStack.push(innerMacroName)
+        if(macrosStack.length !== Array.from(new Set(macrosStack)).length) {
+          return null
+        }
+        checkCircularity(macros, macros[innerMacroName], macrosStack)
+      } else {
+        checkCircularity(macros, conditionOrMacro, macrosStack)
+      }
+    })
+  }
+  if(operator === 'macro') {
+    const [innerMacroName] = args
+    macrosStack.push(innerMacroName)
+    checkCircularity(macros, macros[innerMacroName], macrosStack)
+  }
+  return null
+}
+
+const nestedMacroErrors = (macros) => {
+  const errors = []
+  Object.keys(macros).forEach( (macroName) => {
+    const cycle = [macroName]
+    checkCircularity(macros, macros[macroName], cycle)
+    if( cycle.length !== Array.from(new Set(cycle)).length ) {
+      errors.push(cycle)
+    }
+  })
+  return errors
+}
+
 export const generateSql = (dialect, fields, macros, query) => {
+  const errors = nestedMacroErrors(macros)
+  if(errors.length) {
+    return `Circular Macros Detected: ${JSON.stringify(errors)}`
+  }
   const whereStr = where(applyF(fields), macros,  query.where)
   return addLimit(dialect, whereStr ? ` WHERE ${whereStr}` : '', query.limit)
 }

@@ -2,7 +2,11 @@ import { generateSql } from './generateSql'
 const macros = {
  is_joe: ["=", ["field", 2], "joe"],
  is_adult: [">", ["field", 4], 18],
- is_adult_joe: ["and", ["macro", "is_joe"], ["macro", "is_adult"]]
+ is_adult_joe: ["and", ["macro", "is_joe"], ["macro", "is_adult"]],
+}
+const circularMacros = {
+ "is_good": ["and", ["macro", "is_decent"], [">", ["field", 4], 18]],
+ "is_decent": ["and", ["macro", "is_good"], ["<", ["field", 5], 5]]
 }
 const fields = { 1: 'id', 2: 'name', 3: 'date_joined', 4: 'age' }
 const tests = [
@@ -92,14 +96,20 @@ const tests = [
   ],
   [['sqlserver', { limit: 20 }], 'SELECT TOP 20 * FROM data;'],
   [['postgres', { limit: 20 }], 'SELECT * FROM data LIMIT 20;'],
+  [
+    ['postgres', { limit: 20 }],
+    'Circular Macros Detected: [["is_good","is_decent","is_good"],["is_decent","is_good","is_decent"]]',
+    circularMacros,
+  ],
 ]
 
 
 tests.forEach((t, index) => {
   const args = t[0]
   const expected = t[1]
+  const overidenMacros = t[2]
   console.log(`\nTEST ${index + 1} - ${expected}`)
-  const result = generateSql(args[0], fields, macros , args[1])
+  const result = generateSql(args[0], fields, overidenMacros || macros, args[1])
   if (result === expected) {
     console.log('OK')
   } else {
