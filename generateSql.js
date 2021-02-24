@@ -54,6 +54,13 @@ const andOrOperator = (f, operator, args) => {
   }
 }
 
+const emptyOrNotEmpty = (f, operator, args) => {
+  if(args.length > 1) {
+    throw new Error('is-empty and not-empty need only one arg')
+  }
+  return equality(f, operator === 'is-empty' ? '=' : '!=' , [...args, null])
+}
+
 const where = (f, conditions, deep = false) => {
   if(!conditions) return ""
   const [ operator, ...args ] = conditions
@@ -67,6 +74,9 @@ const where = (f, conditions, deep = false) => {
   }
   if (['<', '>'].includes(operator)) {
     whereClause = biggerOrSmaller(f, operator, args)
+  }
+  if(['is-empty', 'not-empty'].includes(operator)) {
+    whereClause = emptyOrNotEmpty(f, operator, args)
   }
   return whereClause
 }

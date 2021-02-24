@@ -7,6 +7,10 @@ const tests = [
     'SELECT * FROM data WHERE date_joined IS NULL;',
   ],
   [
+    ['postgres', fields, { where: ['is-empty', ['field', 3]] }],
+    'SELECT * FROM data WHERE date_joined IS NULL;',
+  ],
+  [
     ['postgres', fields, { where: ['=', ['field', 2], 'joe'] }],
     "SELECT * FROM data WHERE name = 'joe';",
   ],
