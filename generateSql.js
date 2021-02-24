@@ -13,7 +13,7 @@ const addLimit = (dialect, where, limit) => {
   }
 }
 
-const equality = (f, operator, args) => {
+const equalityOperator = (f, operator, args) => {
   if (args.length < 2) {
     throw new Error(' = and != require at least two args')
   }
@@ -34,7 +34,7 @@ const equality = (f, operator, args) => {
   }
 }
 
-const biggerOrSmaller = (f, operator, args) => {
+const biggerOrSmallerOperator = (f, operator, args) => {
   if (args.length != 2) {
     throw new Error(' < and > require exactly two args')
   }
@@ -45,38 +45,50 @@ const biggerOrSmaller = (f, operator, args) => {
   return `${f(firstArg)} ${operator} ${f(secondArg)}`
 }
 
-const andOrOperator = (f, operator, args) => {
-  if(args.length === 1) {
-    return where(f, args[0])
-  }
-  else {
-    return args.map( (innerCondition) => where(f, innerCondition, true) ).join( operator === 'and' ? ' AND ' : ' OR ')
-  }
-}
 
-const emptyOrNotEmpty = (f, operator, args) => {
-  if(args.length > 1) {
+const emptyOrNotEmptyOperator = (f, operator, args) => {
+  if (args.length > 1) {
     throw new Error('is-empty and not-empty need only one arg')
   }
-  return equality(f, operator === 'is-empty' ? '=' : '!=' , [...args, null])
+  return equalityOperator(f, operator === 'is-empty' ? '=' : '!=', [...args, null])
 }
 
-const where = (f, conditions, deep = false) => {
+const andOrOperator = (f, macros, operator, args) => {
+  if(args.length === 1) {
+    return where(f, macros, args[0])
+  }
+  else {
+    return args.map( (innerCondition) => where(f, macros, innerCondition, true) ).join( operator === 'and' ? ' AND ' : ' OR ')
+  }
+}
+
+
+const where = (f, macros, conditions, deep = false) => {
   if(!conditions) return ""
+
   const [ operator, ...args ] = conditions
   let whereClause
   if( ['and', 'or'].includes(operator) ) {
-    const innerWhere = andOrOperator(f, operator, args)
+    const innerWhere = andOrOperator(f, macros, operator, args)
     whereClause = deep ? '('+ innerWhere + ')' : innerWhere
   }
   if( ['=', '!='].includes(operator) ) {
-      whereClause = equality(f, operator, args)
+      whereClause = equalityOperator(f, operator, args)
   }
   if (['<', '>'].includes(operator)) {
-    whereClause = biggerOrSmaller(f, operator, args)
+    whereClause = biggerOrSmallerOperator(f, operator, args)
   }
   if(['is-empty', 'not-empty'].includes(operator)) {
-    whereClause = emptyOrNotEmpty(f, operator, args)
+    whereClause = emptyOrNotEmptyOperator(f, operator, args)
+  }
+
+  if( operator === 'macro') {
+    const [ macroName ] = args
+    if(macros[macroName]) {
+      whereClause = where(f, macros, macros[macroName])
+    } else {
+      throw new Error(`Macro ${macroName} does not exist`)
+    }
   }
   return whereClause
 }
@@ -90,10 +102,8 @@ const applyF = (fields) => (arg) => {
   }
   return typeof arg === 'number' ? arg : `'${arg}'`
 }
-export const generateSql = (dialect, fields, query) => {
 
-  const whereStr = where(applyF(fields), query.where)
-
+export const generateSql = (dialect, fields, macros, query) => {
+  const whereStr = where(applyF(fields), macros,  query.where)
   return addLimit(dialect, whereStr ? ` WHERE ${whereStr}` : '', query.limit)
-
 }

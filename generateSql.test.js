@@ -1,31 +1,44 @@
 import { generateSql } from './generateSql'
-
+const macros = { "is_joe": ["=", ["field", 2], "joe"]}
 const fields = { 1: 'id', 2: 'name', 3: 'date_joined', 4: 'age' }
 const tests = [
   [
-    ['postgres', fields, { where: ['=', ['field', 3], null] }],
-    'SELECT * FROM data WHERE date_joined IS NULL;',
-  ],
-  [
-    ['postgres', fields, { where: ['is-empty', ['field', 3]] }],
-    'SELECT * FROM data WHERE date_joined IS NULL;',
-  ],
-  [
-    ['postgres', fields, { where: ['=', ['field', 2], 'joe'] }],
+    ['postgres', { where: ['macro', 'is_joe'] }],
     "SELECT * FROM data WHERE name = 'joe';",
   ],
   [
-    ['postgres', fields, { where: ['>', ['field', 4], 35] }],
-    'SELECT * FROM data WHERE age > 35;',
+    ['postgres', { where: ['=', ['field', 3], null] }],
+    'SELECT * FROM data WHERE date_joined IS NULL;',
   ],
   [
-    ['postgres', fields, { where: ['and', ['<', ['field', 1], 5]] }],
-    'SELECT * FROM data WHERE id < 5;',
+    ['postgres', { where: ['is-empty', ['field', 3]] }],
+    'SELECT * FROM data WHERE date_joined IS NULL;',
+  ],
+  [
+    ['postgres', { where: ['=', ['field', 2], 'joe'] }],
+    "SELECT * FROM data WHERE name = 'joe';",
+  ],
+  [
+    ['postgres', { where: ['>', ['field', 4], 35] }],
+    'SELECT * FROM data WHERE age > 35;',
   ],
   [
     [
       'postgres',
-      fields,
+      {
+        where: [
+          'and',
+            ['<',
+              ['field', 1],
+              5
+            ]
+          ]
+        }],
+      'SELECT * FROM data WHERE id < 5;',
+  ],
+  [
+    [
+      'postgres',
       { where: ['and', ['<', ['field', 1], 5], ['=', ['field', 2], 'joe']] },
     ],
     "SELECT * FROM data WHERE id < 5 AND name = 'joe';",
@@ -33,7 +46,6 @@ const tests = [
   [
     [
       'postgres',
-      fields,
       {
         where: [
           'or',
@@ -47,7 +59,6 @@ const tests = [
   [
     [
       'postgres',
-      fields,
       {
         where: [
           'and',
@@ -59,36 +70,25 @@ const tests = [
     "SELECT * FROM data WHERE date_joined IS NOT NULL AND (age > 25 OR name = 'Jerry');",
   ],
   [
-    ['postgres', fields, { where: ['=', ['field', 4], 25, 26, 27] }],
+    ['postgres', { where: ['=', ['field', 4], 25, 26, 27] }],
     'SELECT * FROM data WHERE age IN (25, 26, 27);', // DOCUMENTATION'S TEST CASE WAS WRONG, field 4 is age, not date_joined
   ],
   [
-    ['postgres', fields, { where: ['=', ['field', 2], 'cam'] }],
+    ['postgres', { where: ['=', ['field', 2], 'cam'] }],
     "SELECT * FROM data WHERE name = 'cam';",
   ],
   [
     [
-      "mysql",
-      fields,
+      'mysql',
       {
-        where: [
-          "=",
-          ["field", 2],
-          "cam"
-        ],
-        "limit": 10
-      }
+        where: ['=', ['field', 2], 'cam'],
+        limit: 10,
+      },
     ],
-    "SELECT * FROM data WHERE name = 'cam' LIMIT 10;"
+    "SELECT * FROM data WHERE name = 'cam' LIMIT 10;",
   ],
-  [
-    ['sqlserver', fields, { limit: 20 }],
-    'SELECT TOP 20 * FROM data;'
-  ],
-  [
-    ['postgres', fields, { limit: 20 }],
-    'SELECT * FROM data LIMIT 20;'
-  ],
+  [['sqlserver', { limit: 20 }], 'SELECT TOP 20 * FROM data;'],
+  [['postgres', { limit: 20 }], 'SELECT * FROM data LIMIT 20;'],
 ]
 
 
@@ -96,7 +96,7 @@ tests.forEach((t, index) => {
   const args = t[0]
   const expected = t[1]
   console.log(`\nTEST ${index + 1} - ${expected}`)
-  const result = generateSql(args[0], args[1], args[2])
+  const result = generateSql(args[0], fields, macros , args[1])
   if (result === expected) {
     console.log('OK')
   } else {
