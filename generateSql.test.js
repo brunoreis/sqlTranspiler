@@ -1,10 +1,18 @@
 import { generateSql } from './generateSql'
-const macros = { "is_joe": ["=", ["field", 2], "joe"]}
+const macros = {
+ is_joe: ["=", ["field", 2], "joe"],
+ is_adult: [">", ["field", 4], 18],
+ is_adult_joe: ["and", ["macro", "is_joe"], ["macro", "is_adult"]]
+}
 const fields = { 1: 'id', 2: 'name', 3: 'date_joined', 4: 'age' }
 const tests = [
   [
     ['postgres', { where: ['macro', 'is_joe'] }],
     "SELECT * FROM data WHERE name = 'joe';",
+  ],
+  [
+    ['postgres', { where: ['macro', 'is_adult_joe'] }],
+    "SELECT * FROM data WHERE name = 'joe' AND age > 18;",
   ],
   [
     ['postgres', { where: ['=', ['field', 3], null] }],
@@ -26,15 +34,10 @@ const tests = [
     [
       'postgres',
       {
-        where: [
-          'and',
-            ['<',
-              ['field', 1],
-              5
-            ]
-          ]
-        }],
-      'SELECT * FROM data WHERE id < 5;',
+        where: ['and', ['<', ['field', 1], 5]],
+      },
+    ],
+    'SELECT * FROM data WHERE id < 5;',
   ],
   [
     [
