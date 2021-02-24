@@ -1,7 +1,6 @@
 {
   "name": "sqltranspiler",
   "version": "1.0.0",
-  "description": "",
   "main": "generateSql.js",
   "scripts": {
     "start": "node -r esm server.js"
@@ -9,11 +8,6 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brunoreis/sqlTranspiler.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/brunoreis/sqlTranspiler/issues"
   },
   "homepage": "https://github.com/brunoreis/sqlTranspiler#readme",
   "dependencies": {
